@@ -1,6 +1,5 @@
 package com.jobtracker.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jobtracker.dto.AnalyzeRequest;
 import com.jobtracker.dto.AnalyzeResponse;
 import org.junit.jupiter.api.Test;
@@ -10,8 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnalysisServiceTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** Capturing stub: records the prompts and returns a canned response. */
     private static final class StubLlmClient implements LlmClient {
@@ -36,7 +33,7 @@ class AnalysisServiceTest {
         StubLlmClient stub = new StubLlmClient(
                 "{\"requirements\":[\"Java\",\"Spring Boot\"]," +
                         "\"tailoredBullets\":[\"Built X\",\"Shipped Y\"]}");
-        AnalysisService service = new AnalysisService(stub, objectMapper);
+        AnalysisService service = new AnalysisService(stub);
 
         AnalyzeResponse result = service.analyze(
                 new AnalyzeRequest("Looking for a Java engineer", null, null));
@@ -51,7 +48,7 @@ class AnalysisServiceTest {
                 "Sure! Here is the analysis:\n```json\n" +
                         "{\"requirements\":[\"Kubernetes\"],\"tailoredBullets\":[\"Ran clusters\"]}" +
                         "\n```\nHope that helps.");
-        AnalysisService service = new AnalysisService(stub, objectMapper);
+        AnalysisService service = new AnalysisService(stub);
 
         AnalyzeResponse result = service.analyze(
                 new AnalyzeRequest("DevOps role", null, null));
@@ -64,7 +61,7 @@ class AnalysisServiceTest {
     void includesCompanyAndRoleInPromptWhenProvided() {
         StubLlmClient stub = new StubLlmClient(
                 "{\"requirements\":[],\"tailoredBullets\":[]}");
-        AnalysisService service = new AnalysisService(stub, objectMapper);
+        AnalysisService service = new AnalysisService(stub);
 
         service.analyze(new AnalyzeRequest("JD body here", "Acme", "Backend Engineer"));
 
@@ -76,7 +73,7 @@ class AnalysisServiceTest {
     @Test
     void throwsAnalysisExceptionOnUnparseableResponse() {
         StubLlmClient stub = new StubLlmClient("the model rambled with no json at all");
-        AnalysisService service = new AnalysisService(stub, objectMapper);
+        AnalysisService service = new AnalysisService(stub);
 
         assertThrows(AnalysisException.class, () ->
                 service.analyze(new AnalyzeRequest("JD", null, null)));
@@ -85,7 +82,7 @@ class AnalysisServiceTest {
     @Test
     void throwsAnalysisExceptionWhenRequiredFieldsMissing() {
         StubLlmClient stub = new StubLlmClient("{\"requirements\":[\"Java\"]}");
-        AnalysisService service = new AnalysisService(stub, objectMapper);
+        AnalysisService service = new AnalysisService(stub);
 
         assertThrows(AnalysisException.class, () ->
                 service.analyze(new AnalyzeRequest("JD", null, null)));

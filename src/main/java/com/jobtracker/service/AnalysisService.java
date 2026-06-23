@@ -1,10 +1,11 @@
 package com.jobtracker.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jobtracker.dto.AnalyzeRequest;
 import com.jobtracker.dto.AnalyzeResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Orchestrates a single job-description analysis: assembles the prompt, calls
@@ -35,12 +36,19 @@ public class AnalysisService {
             }
             """;
 
-    private final LlmClient llmClient;
-    private final ObjectMapper objectMapper;
+    /**
+     * Dedicated mapper for the LLM JSON boundary, kept independent of the
+     * application's HTTP {@code ObjectMapper}. The public API serializes in
+     * snake_case (see {@code spring.jackson.property-naming-strategy}), but
+     * Claude is prompted to return camelCase keys — so parsing its response
+     * must use a plain camelCase mapper, not the snake_case HTTP one.
+     */
+    private static final ObjectMapper LLM_MAPPER = JsonMapper.builder().build();
 
-    public AnalysisService(LlmClient llmClient, ObjectMapper objectMapper) {
+    private final LlmClient llmClient;
+
+    public AnalysisService(LlmClient llmClient) {
         this.llmClient = llmClient;
-        this.objectMapper = objectMapper;
     }
 
     public AnalyzeResponse analyze(AnalyzeRequest request) {
@@ -70,7 +78,7 @@ public class AnalysisService {
     private AnalyzeResponse parse(String raw) {
         String json = extractJsonObject(raw);
         try {
-            AnalyzeResponse response = objectMapper.readValue(json, AnalyzeResponse.class);
+            AnalyzeResponse response = LLM_MAPPER.readValue(json, AnalyzeResponse.class);
             if (response.requirements() == null || response.tailoredBullets() == null) {
                 throw new AnalysisException("Claude response missing required fields");
             }

@@ -1,6 +1,12 @@
 spring:
   application:
     name: ai-job-tracker
+  jackson:
+    # All HTTP request/response JSON uses snake_case on the wire while the Java
+    # DTOs keep idiomatic camelCase fields — no per-DTO annotations needed.
+    # NOTE: this is the public-API mapper only. The LLM-boundary JSON is parsed
+    # by a separate mapper in AnalysisService, so Claude still gets camelCase.
+    property-naming-strategy: SNAKE_CASE
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/jobtracker}
     username: ${DB_USERNAME:jobtracker}
