@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: ai-job-tracker
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/jobtracker}
+    username: ${DB_USERNAME:jobtracker}
+    password: ${DB_PASSWORD:change-me}
+  jpa:
+    hibernate:
+      # Slice-1 convenience. Move to Flyway/Liquibase migrations before any
+      # shared/deployed environment.
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+claude:
+  # Current Sonnet model (verified June 2026). Swappable without touching code.
+  model: claude-sonnet-4-6
+  max-tokens: 2048
+  # API key is read by the Anthropic SDK from the ANTHROPIC_API_KEY env var.
+
+server:
+  port: 8080

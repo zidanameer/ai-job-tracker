@@ -1,0 +1,22 @@
+# Local PostgreSQL for development. Brought up at the "wire up the DB" step
+# (needs Docker/OrbStack installed). Reads values from your .env if present.
+services:
+  postgres:
+    image: postgres:17
+    container_name: jobtracker-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jobtracker}
+      POSTGRES_USER: ${POSTGRES_USER:-jobtracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobtracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

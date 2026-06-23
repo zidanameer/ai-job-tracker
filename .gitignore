@@ -1,0 +1,19 @@
+# Secrets — never commit
+.env
+*.env
+!.env.example
+
+# Maven build output
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS noise
+.DS_Store
+
+# Logs
+*.log
