@@ -21,11 +21,9 @@ spring:
         format_sql: true
     open-in-view: false
 
-claude:
-  # Current Sonnet model (verified June 2026). Swappable without touching code.
-  model: claude-sonnet-4-6
-  max-tokens: 2048
-  # API key is read by the Anthropic SDK from the ANTHROPIC_API_KEY env var.
+gemini:
+  model: gemini-2.5-flash
+  api-key: ${GEMINI_API_KEY}
 
 server:
   port: 8080
