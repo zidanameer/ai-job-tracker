@@ -19,7 +19,6 @@
 
     <properties>
         <java.version>25</java.version>
-        <anthropic.sdk.version>2.43.0</anthropic.sdk.version>
     </properties>
 
     <dependencies>
@@ -34,13 +33,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <!-- Official Anthropic Java SDK for the Claude Messages API -->
-        <dependency>
-            <groupId>com.anthropic</groupId>
-            <artifactId>anthropic-java</artifactId>
-            <version>${anthropic.sdk.version}</version>
         </dependency>
 
         <!-- PostgreSQL driver (runtime) -->
