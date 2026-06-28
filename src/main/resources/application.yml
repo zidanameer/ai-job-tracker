@@ -1,6 +1,14 @@
 spring:
   application:
     name: ai-job-tracker
+  threads:
+    # Each HTTP request runs on its own virtual thread instead of a pooled
+    # platform thread. The hot path (/api/analyze) blocks on an external LLM
+    # call, so it spends most of its time waiting on I/O — the ideal workload
+    # for virtual threads: thousands of in-flight requests can park cheaply
+    # while Gemini responds, instead of being capped by a fixed Tomcat pool.
+    virtual:
+      enabled: true
   jackson:
     # All HTTP request/response JSON uses snake_case on the wire while the Java
     # DTOs keep idiomatic camelCase fields — no per-DTO annotations needed.
@@ -24,6 +32,15 @@ spring:
 gemini:
   model: gemini-2.5-flash
   api-key: ${GEMINI_API_KEY}
+  # Hot-path guardrails. Virtual threads remove the accidental request-thread
+  # cap, so the limit on outbound Gemini load must be made explicit here:
+  #  - timeouts so a hung call fails fast (-> 502) instead of parking forever
+  #  - max-concurrent-requests bounds in-flight calls to stay under Gemini's
+  #    rate limits and control cost; excess callers park cheaply on their
+  #    virtual thread until a permit frees.
+  connect-timeout-ms: 5000
+  read-timeout-ms: 30000
+  max-concurrent-requests: 10
 
 server:
   port: 8080

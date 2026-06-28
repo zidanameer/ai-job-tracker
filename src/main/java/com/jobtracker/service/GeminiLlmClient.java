@@ -4,12 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 @Component
 public class GeminiLlmClient implements LlmClient {
@@ -22,12 +25,31 @@ public class GeminiLlmClient implements LlmClient {
     private final String model;
     private final String apiKey;
 
+    /**
+     * Bounds the number of in-flight Gemini calls. The web tier accepts requests
+     * on unbounded virtual threads, so this is the explicit backpressure that
+     * keeps outbound load under Gemini's rate limits and caps cost. Callers past
+     * the limit park cheaply on their virtual thread until a permit frees; the
+     * read timeout bounds how long any one permit can be held.
+     */
+    private final Semaphore inFlight;
+
     public GeminiLlmClient(
             @Value("${gemini.model}") String model,
-            @Value("${gemini.api-key}") String apiKey) {
+            @Value("${gemini.api-key}") String apiKey,
+            @Value("${gemini.connect-timeout-ms}") int connectTimeoutMs,
+            @Value("${gemini.read-timeout-ms}") int readTimeoutMs,
+            @Value("${gemini.max-concurrent-requests}") int maxConcurrentRequests) {
         this.model = model;
         this.apiKey = apiKey;
-        this.restClient = RestClient.create();
+        this.inFlight = new Semaphore(maxConcurrentRequests);
+
+        var requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
+        requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
+        this.restClient = RestClient.builder()
+                .requestFactory(requestFactory)
+                .build();
     }
 
     @Override
@@ -42,6 +64,13 @@ public class GeminiLlmClient implements LlmClient {
         );
 
         try {
+            inFlight.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AnalysisException("Interrupted while waiting for Gemini capacity", e);
+        }
+
+        try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restClient.post()
                     .uri(BASE_URL + model + ":generateContent?key=" + apiKey)
@@ -54,6 +83,8 @@ public class GeminiLlmClient implements LlmClient {
         } catch (RestClientException e) {
             log.warn("Gemini API call failed: {}", e.getMessage());
             throw new AnalysisException("Gemini API call failed", e);
+        } finally {
+            inFlight.release();
         }
     }
 
